@@ -1,13 +1,32 @@
 // index.js
-import { Client, GatewayIntentBits, ActivityType } from "discord.js";
+import 'dotenv/config';
+import http from 'node:http';
+import { Client, GatewayIntentBits, ActivityType, Events } from "discord.js";
 import fetch from "node-fetch";
-import dotenv from "dotenv";
 
-dotenv.config();
+const RULES_CHANNEL_ID = "1459512898417070185";
 
-const RULES_CHANNEL_ID = "1459512898417070185"; // Vervang door jouw kanaal-ID
+/* ======================
+   HTTP SERVER (RENDER)
+====================== */
+const PORT = process.env.PORT || 3000;
 
-// ---------- Discord Client ----------
+http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+    return;
+  }
+
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot is online 🚀');
+}).listen(PORT, () => {
+  console.log(`🌐 HTTP server draait op poort ${PORT}`);
+});
+
+/* ======================
+   DISCORD CLIENT
+====================== */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -16,6 +35,9 @@ const client = new Client({
   ]
 });
 
+/* ======================
+   SERVER RULES
+====================== */
 const SERVER_RULES = `
 REGELS:
 
@@ -213,20 +235,22 @@ APV toevoeging ;
 
 `;
 
-
-// ---------- Ready Event ----------
-client.once("clientReady", () => { // v15 correctie
+/* ======================
+   READY EVENT (GEFIXT)
+====================== */
+client.once(Events.ClientReady, () => {
   console.log(`✅ Bot online als ${client.user.tag}`);
-  client.user.setActivity("Murat's Shop", { type: ActivityType.Watching });
+  client.user.setActivity("Murat's Shop", {
+    type: ActivityType.Watching
+  });
 });
 
-// ---------- Message Handler ----------
+/* ======================
+   MESSAGE HANDLER
+====================== */
 client.on("messageCreate", async (message) => {
-  // ❌ Negeer bots en webhooks
   if (message.author.bot) return;
   if (message.webhookId) return;
-
-  // ❌ Alleen het regels-kanaal
   if (message.channel.id !== RULES_CHANNEL_ID) return;
 
   await message.channel.sendTyping();
@@ -263,38 +287,22 @@ ${SERVER_RULES}
 
     const data = await response.json();
 
-    // ❌ Als er een error is, stuur niets in Discord
     if (data.error) {
-      console.error("Groq API error:", data.error.message, "⚠️ flags: 64");
+      console.error("Groq API error:", data.error.message);
       return;
     }
 
-    // ❌ Alleen antwoorden met content worden verstuurd
     const answer = data.choices?.[0]?.message?.content?.trim();
     if (!answer) return;
 
     await message.reply(answer);
 
   } catch (err) {
-    console.error("Groq API fout:", err, "⚠️ flags: 64");
-    // ❌ GEEN reply naar Discord
+    console.error("Groq API fout:", err);
   }
 });
 
-const http = require('http');
-
-module.exports = function startPort() {
-  const PORT = process.env.PORT || 3000;
-
-  http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is online 🚀');
-  }).listen(PORT, () => {
-    console.log(`🌐 HTTP server draait op poort ${PORT}`);
-  });
-};
-
-
-// ---------- Login ----------
+/* ======================
+   LOGIN
+====================== */
 client.login(process.env.DISCORD_TOKEN);
-
