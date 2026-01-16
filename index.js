@@ -281,5 +281,20 @@ ${SERVER_RULES}
   }
 });
 
+const http = require('http');
+
+module.exports = function startPort() {
+  const PORT = process.env.PORT || 3000;
+
+  http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is online 🚀');
+  }).listen(PORT, () => {
+    console.log(`🌐 HTTP server draait op poort ${PORT}`);
+  });
+};
+
+
 // ---------- Login ----------
 client.login(process.env.DISCORD_TOKEN);
+
